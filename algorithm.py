@@ -29,13 +29,12 @@ class EURUSDForexAlgo(QCAlgorithm):
     # symbol of the forex pair: European Euros and US Dollars
     SYMBOL = "EURUSD"
 
-    # hourly resolution for data and bot activity
-    RESOL = Resolution.Hour
-
     # number of periods where the fast moving average is
     # above or below the slow moving average before
     # a trend is confirmed
-    TREND_PERIODS = 17
+    HOURLY_TREND_PERIODS = 17
+
+    DAILY_TREND_PERIODS = 4
 
     # limit for the number of trades per trend
     TREND_LIMIT_NUM_TRADES = 3
@@ -69,10 +68,10 @@ class EURUSDForexAlgo(QCAlgorithm):
         self.SetEndDate(2018, 11, 5)
 
         # amount of cash to use for backtest
-        self.SetCash(10000)
+        self.SetCash(1000)
 
         # forex pair object
-        self.forexPair = self.AddForex(self.SYMBOL, self.RESOL)
+        self.forexPair = self.AddForex(self.SYMBOL, Resolution.Hour)
 
         # brokerage model dictates the costs, slippage model, and fees
         # associated with the broker
@@ -82,11 +81,16 @@ class EURUSDForexAlgo(QCAlgorithm):
         # slow moving average indicator: 200 periods
         # fast moving average indicator: 50 periods
         # these indicator objects are automatically updated
-        self.slow = self.SMA(self.forexPair.Symbol, 200, self.forexPair.Resolution)
-        self.fast = self.SMA(self.forexPair.Symbol, 50, self.forexPair.Resolution)
+        self.hourlySlowSMA = self.SMA(self.forexPair.Symbol, 200, Resolution.Hour)
+        self.hourlyFastSMA = self.SMA(self.forexPair.Symbol, 50, Resolution.Hour)
+
+        self.dailySlowSMA = self.SMA(self.forexPair.Symbol, 21, Resolution.Daily)
+        self.dailyFastSMA = self.SMA(self.forexPair.Symbol, 7, Resolution.Daily)
 
         # counter defining the number of periods of the ongoing trend
-        self.SMATrend = 0
+        self.hourlySMATrend = 0
+
+        self.dailySMATrend = 0
 
         # number of trades executed in this trend
         self.trendNumTrades = 0
@@ -95,7 +99,7 @@ class EURUSDForexAlgo(QCAlgorithm):
         # stochastic period: 9
         # stochastic k period: 9
         # stochastic d period: 5
-        self.stoch = self.STO(self.forexPair.Symbol, 9, 9, 5, self.forexPair.Resolution)
+        self.stoch = self.STO(self.forexPair.Symbol, 9, 9, 5, Resolution.Hour)
         
         # keeps track of overbought/oversold conditions in the previous period
         self.previousIsOverbought = None
@@ -109,7 +113,7 @@ class EURUSDForexAlgo(QCAlgorithm):
         """Method called when new data is ready for each period."""
         
         # only trade when the indicators are ready
-        if not self.slow.IsReady or not self.fast.IsReady or not self.stoch.IsReady:
+        if not self.hourlySlowSMA.IsReady or not self.hourlyFastSMA.IsReady or not self.stoch.IsReady:
             return None
         
         # trade only once per period
@@ -152,8 +156,9 @@ class EURUSDForexAlgo(QCAlgorithm):
 
         # conditions for going long (buying)
         if (
+                self.dailySMATrend >= self.DAILY_TREND_PERIODS and
                 # uptrend for a certain number of periods
-                self.SMATrend >= self.TREND_PERIODS and
+                self.hourlySMATrend >= self.HOURLY_TREND_PERIODS and
                 # if it is not oversold
                 self.stoch.StochD.Current.Value > self.STOCH_OVERSOLD_LEVEL and
                 # if it just recently stopped being oversold
@@ -170,8 +175,9 @@ class EURUSDForexAlgo(QCAlgorithm):
 
         # conditions for going short (selling)
         elif (
+                self.dailySMATrend <= -self.DAILY_TREND_PERIODS and
                 # downtrend for a certain number of periods
-                self.SMATrend <= -(self.TREND_PERIODS) and
+                self.hourlySMATrend <= -self.HOURLY_TREND_PERIODS and
                 # if it is not overbought
                 self.stoch.StochD.Current.Value < self.STOCH_OVERBOUGHT_LEVEL and
                 # if it just recently stopped being overbought
@@ -193,25 +199,50 @@ class EURUSDForexAlgo(QCAlgorithm):
     def periodPreUpdateStats(self):
         """Method called before considering trades for each period."""
 
+        if self.previousTime.date() != self.Time.date():
+
+            # uptrend: if the fast moving average is above the slow moving average
+            if self.dailyFastSMA.Current.Value > self.dailySlowSMA.Current.Value:
+
+                if self.dailySMATrend < 0:
+
+                    self.dailySMATrend = 0
+                    self.hourlySMATrend = 0
+                    self.trendNumTrades = 0
+
+                self.dailySMATrend += 1
+
+            # downtrend: if the fast moving average is below the slow moving average
+            elif self.dailyFastSMA.Current.Value < self.dailySlowSMA.Current.Value:
+
+                if self.dailySMATrend > 0:
+
+                    self.dailySMATrend = 0
+                    self.hourlySMATrend = 0
+                    self.trendNumTrades = 0
+
+                self.dailySMATrend -= 1
+
+
         # uptrend: if the fast moving average is above the slow moving average
-        if self.fast.Current.Value > self.slow.Current.Value:
+        if self.hourlyFastSMA.Current.Value > self.hourlySlowSMA.Current.Value:
 
-            if self.SMATrend < 0:
+            if self.hourlySMATrend < 0:
 
-                self.SMATrend = 0
+                self.hourlySMATrend = 0
                 self.trendNumTrades = 0
 
-            self.SMATrend += 1
+            self.hourlySMATrend += 1
 
         # downtrend: if the fast moving average is below the slow moving average
-        elif self.fast.Current.Value < self.slow.Current.Value:
+        elif self.hourlyFastSMA.Current.Value < self.hourlySlowSMA.Current.Value:
 
-            if self.SMATrend > 0:
+            if self.hourlySMATrend > 0:
 
-                self.SMATrend = 0
+                self.hourlySMATrend = 0
                 self.trendNumTrades = 0
 
-            self.SMATrend -= 1
+            self.hourlySMATrend -= 1
 
 
     def periodPostUpdateStats(self):
