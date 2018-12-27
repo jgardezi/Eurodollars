@@ -2,6 +2,8 @@
 
 ![Backtest Performance](./img/perf.png)
 
+![Overall Statistics](./img/stats.png)
+
 ### Table of Contents
 1. [Intro](#intro)
 2. [Instructions](#instructions)
