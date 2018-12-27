@@ -33,7 +33,6 @@ class EURUSDForexAlgo(QCAlgorithm):
     # above or below the slow moving average before
     # a trend is confirmed
     HOURLY_TREND_PERIODS = 17
-
     DAILY_TREND_PERIODS = 4
 
     # limit for the number of trades per trend
@@ -64,8 +63,8 @@ class EURUSDForexAlgo(QCAlgorithm):
         """Method called to initialize the trading algorithm."""
 
         # backtest testing range
-        self.SetStartDate(2007, 1, 1)
-        self.SetEndDate(2018, 11, 5)
+        self.SetStartDate(2008, 1, 1)
+        self.SetEndDate(2018, 12, 25)
 
         # amount of cash to use for backtest
         self.SetCash(1000)
@@ -84,12 +83,17 @@ class EURUSDForexAlgo(QCAlgorithm):
         self.hourlySlowSMA = self.SMA(self.forexPair.Symbol, 200, Resolution.Hour)
         self.hourlyFastSMA = self.SMA(self.forexPair.Symbol, 50, Resolution.Hour)
 
+        # define a pair of moving averages in order to confirm an
+        # alignment trend in the daily charts
+        # If both the hourly trend (using the 2 hourly SMAs above) and daily
+        # trend show the same trend direction,
+        # then the trend is a strong trend
         self.dailySlowSMA = self.SMA(self.forexPair.Symbol, 21, Resolution.Daily)
         self.dailyFastSMA = self.SMA(self.forexPair.Symbol, 7, Resolution.Daily)
 
-        # counter defining the number of periods of the ongoing trend
+        # counters defining the number of periods of the ongoing trend
+        # (both the main hourly trend and the alignment daily trend)
         self.hourlySMATrend = 0
-
         self.dailySMATrend = 0
 
         # number of trades executed in this trend
@@ -156,8 +160,9 @@ class EURUSDForexAlgo(QCAlgorithm):
 
         # conditions for going long (buying)
         if (
+                # uptrend for a certain number of periods in both
+                # the main hourly trend and alignment daily trend
                 self.dailySMATrend >= self.DAILY_TREND_PERIODS and
-                # uptrend for a certain number of periods
                 self.hourlySMATrend >= self.HOURLY_TREND_PERIODS and
                 # if it is not oversold
                 self.stoch.StochD.Current.Value > self.STOCH_OVERSOLD_LEVEL and
@@ -175,8 +180,9 @@ class EURUSDForexAlgo(QCAlgorithm):
 
         # conditions for going short (selling)
         elif (
+                # downtrend for a certain number of periods in both
+                # the main hourly trend and alignment daily trend
                 self.dailySMATrend <= -self.DAILY_TREND_PERIODS and
-                # downtrend for a certain number of periods
                 self.hourlySMATrend <= -self.HOURLY_TREND_PERIODS and
                 # if it is not overbought
                 self.stoch.StochD.Current.Value < self.STOCH_OVERBOUGHT_LEVEL and
@@ -199,49 +205,37 @@ class EURUSDForexAlgo(QCAlgorithm):
     def periodPreUpdateStats(self):
         """Method called before considering trades for each period."""
 
+        # since this class's OnData() method is being called in each new
+        # hourly period, the daily stats should only be updated if
+        # the current date is different from the date of the previous
+        # invocation
         if self.previousTime.date() != self.Time.date():
 
             # uptrend: if the fast moving average is above the slow moving average
             if self.dailyFastSMA.Current.Value > self.dailySlowSMA.Current.Value:
-
                 if self.dailySMATrend < 0:
-
                     self.dailySMATrend = 0
-                    self.hourlySMATrend = 0
-                    self.trendNumTrades = 0
-
                 self.dailySMATrend += 1
 
             # downtrend: if the fast moving average is below the slow moving average
             elif self.dailyFastSMA.Current.Value < self.dailySlowSMA.Current.Value:
-
                 if self.dailySMATrend > 0:
-
                     self.dailySMATrend = 0
-                    self.hourlySMATrend = 0
-                    self.trendNumTrades = 0
-
                 self.dailySMATrend -= 1
 
 
         # uptrend: if the fast moving average is above the slow moving average
         if self.hourlyFastSMA.Current.Value > self.hourlySlowSMA.Current.Value:
-
             if self.hourlySMATrend < 0:
-
                 self.hourlySMATrend = 0
                 self.trendNumTrades = 0
-
             self.hourlySMATrend += 1
 
         # downtrend: if the fast moving average is below the slow moving average
         elif self.hourlyFastSMA.Current.Value < self.hourlySlowSMA.Current.Value:
-
             if self.hourlySMATrend > 0:
-
                 self.hourlySMATrend = 0
                 self.trendNumTrades = 0
-
             self.hourlySMATrend -= 1
 
 
