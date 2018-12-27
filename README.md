@@ -1,5 +1,7 @@
 # Eurodollars: Using Failed Trend Reversals in EUR/USD Trend Trading
 
+![Backtest Performance](./img/perf.png)
+
 ### Table of Contents
 1. [Intro](#intro)
 2. [Instructions](#instructions)
