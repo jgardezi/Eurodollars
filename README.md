@@ -8,11 +8,11 @@
 1. [Intro](#intro)
 2. [Instructions](#instructions)
 3. [Technical Indicators Used](#techind)
-  1. [SMA](#sma)
-  2. [Stochastic](#sto)
-4. [Strategy](#strat)
-5. [Risk Management](#risk)
-6. [Possible Improvements](#improve)
+4. [SMA](#sma)
+5. [Stochastic](#sto)
+6. [Strategy](#strat)
+7. [Risk Management](#risk)
+8. [Possible Improvements](#improve)
 
 <a name="intro"></a>
 ### Intro
