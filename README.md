@@ -2,12 +2,13 @@
 
 ### Table of Contents
 1. [Intro](#intro)
-2. [Technical Indicators Used](#techind)
+2. [Instructions](#instructions)
+3. [Technical Indicators Used](#techind)
   1. [SMA](#sma)
   2. [Stochastic](#sto)
-3. [Strategy](#strat)
-4. [Risk Management](#risk)
-5. [Possible Improvements](#improve)
+4. [Strategy](#strat)
+5. [Risk Management](#risk)
+6. [Possible Improvements](#improve)
 
 <a name="intro"></a>
 ### Intro
@@ -25,6 +26,16 @@ I also used [TradingView](https://www.tradingview.com/) to learn financial techn
 [StockCharts](https://stockcharts.com/school/doku.php?id=chart_school) was also useful in gaining a thorough understanding of several technical indicators. It also presents several scenarios, as well as when it is/isn't best to use each indicator/oscillator.
 
 Special thanks to [makemo8](https://www.youtube.com/user/makemo8) and [UKspreadbetting](https://www.youtube.com/user/ukspreadbetting) (both YouTube channels) for giving me a lot strategies, ideas, and inspiration.
+
+<a name="instructions"></a>
+### Instructions
+
+The code is inside the [src](./src) folder. Source code is in Python 3 and is dependent on QuantConnect's LEAN trading engine.
+
+However, as previously mentioned in the intro, the proprietary nature of backtesting data (from multiple brokerages) means that QuantConnect only allows using these data only if the algorithm is backtested using the web interface. The backtesting data is not available for download. For small time traders and other interested hobbyists like me, it is better to just run the algorithm on QuantConnect's web interface (which has access to all backtesting data from multiple brokerages). If you have your own trading data, LEAN's documentation provides information on how to plug them into the trading/backtesting engine.
+
+[Instructions for LEAN Engine (Backtesting on Own Computer with Limited Free Data)](https://github.com/QuantConnect/Lean)
+[QuantConnect's Web Interface (Backtesting on QuantConnect with Robust Free Data)](https://www.quantconnect.com/)
 
 <a name="techind"></a>
 ### Technical Indicators Used
