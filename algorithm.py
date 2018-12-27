@@ -40,7 +40,7 @@ class EURUSDForexAlgo(QCAlgorithm):
     TREND_LIMIT_NUM_TRADES = 3
 
     # maximum holdings for each market direction
-    MAX_HOLDING_ONE_DIRECTION = 0
+    MAX_HOLDING_ONE_DIRECTION = 1
 
     # units of currency for each trade
     TRADE_SIZE = 5000
@@ -52,7 +52,7 @@ class EURUSDForexAlgo(QCAlgorithm):
     # stochastic indicator levels for overbought and oversold
     STOCH_OVERBOUGHT_LEVEL = 80
     STOCH_OVERSOLD_LEVEL = 20
-    
+
     # dictionary to keep track of associated take-profit and
     # stop-loss orders
     associatedOrders = {}
@@ -100,7 +100,7 @@ class EURUSDForexAlgo(QCAlgorithm):
         # stochastic k period: 9
         # stochastic d period: 5
         self.stoch = self.STO(self.forexPair.Symbol, 9, 9, 5, Resolution.Hour)
-        
+
         # keeps track of overbought/oversold conditions in the previous period
         self.previousIsOverbought = None
         self.previousIsOversold = None
@@ -111,11 +111,11 @@ class EURUSDForexAlgo(QCAlgorithm):
 
     def OnData(self, data):
         """Method called when new data is ready for each period."""
-        
+
         # only trade when the indicators are ready
         if not self.hourlySlowSMA.IsReady or not self.hourlyFastSMA.IsReady or not self.stoch.IsReady:
             return None
-        
+
         # trade only once per period
         if self.previousTime.time().hour == self.Time.time().hour:
             return None
@@ -136,7 +136,7 @@ class EURUSDForexAlgo(QCAlgorithm):
 
         # it is suitable to go short during this period
         elif (self.entrySuitability() == Position.SHORT):
-                        
+
             self.enterMarketOrderPosition(
                     symbol=self.forexPair.Symbol,
                     position=Position.SHORT,
@@ -165,12 +165,12 @@ class EURUSDForexAlgo(QCAlgorithm):
                 self.previousIsOversold is not None and
                 self.previousIsOversold == True and
                 # if holdings does not exceed the limit for a direction
-                holdings <= self.MAX_HOLDING_ONE_DIRECTION and
+                holdings < self.MAX_HOLDING_ONE_DIRECTION and
                 # if number of trades during this trend does not exceed
                 # the number of trades per trend
                 self.trendNumTrades < self.TREND_LIMIT_NUM_TRADES
             ):
-            
+
             return Position.LONG
 
         # conditions for going short (selling)
@@ -184,14 +184,14 @@ class EURUSDForexAlgo(QCAlgorithm):
                 self.previousIsOverbought is not None and
                 self.previousIsOverbought == True and
                 # if holdings does not exceed the limit for a direction
-                holdings >= -self.MAX_HOLDING_ONE_DIRECTION and
+                holdings > -self.MAX_HOLDING_ONE_DIRECTION and
                 # if number of trades during this trend does not exceed
                 # the number of trades per trend
                 self.trendNumTrades < self.TREND_LIMIT_NUM_TRADES
             ):
 
             return Position.SHORT
-            
+
         # unsuitable to enter a position for now
         return None
 
@@ -252,7 +252,7 @@ class EURUSDForexAlgo(QCAlgorithm):
             self.previousIsOversold = True
         else:
             self.previousIsOversold = False
-            
+
         if self.stoch.StochD.Current.Value >= self.STOCH_OVERBOUGHT_LEVEL:
             self.previousIsOverbought = True
         else:
@@ -287,24 +287,24 @@ class EURUSDForexAlgo(QCAlgorithm):
         self.associatedOrders[stopLossOrderTicket.OrderId] = takeProfitOrderTicket
 
         self.associatedOrdersLock.release()
-        
+
         self.trendNumTrades += 1
 
 
     def OnOrderEvent(self, orderEvent):
         """Method called when an order has an event."""
-        
+
         # if the event associated with the order is about an
         # order being fully filled
         if orderEvent.Status == OrderStatus.Filled:
-            
+
             order = self.Transactions.GetOrderById(orderEvent.OrderId)
-            
+
             # if the order is a take-profit or stop-loss order
             if order.Type == OrderType.Limit or order.Type == OrderType.StopMarket:
 
                 self.associatedOrdersLock.acquire()
-                
+
                 # during volatile markets, the associated order and
                 # this order may have been triggered in quick
                 # succession, so this method is called twice
@@ -313,7 +313,7 @@ class EURUSDForexAlgo(QCAlgorithm):
                 if order.Id not in self.associatedOrders:
                     self.associatedOrdersLock.release()
                     return
-                
+
                 # obtain the associated order and cancel it.
                 associatedOrder = self.associatedOrders[order.Id]
                 associatedOrder.Cancel()
@@ -322,9 +322,9 @@ class EURUSDForexAlgo(QCAlgorithm):
                 # associated order from the hash table.
                 del self.associatedOrders[order.Id]
                 del self.associatedOrders[associatedOrder.OrderId]
-                
+
                 self.associatedOrdersLock.release()
-                
+
 
     def OnEndOfAlgorithm(self):
         """Method called when the algorithm terminates."""
